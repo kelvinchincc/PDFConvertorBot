@@ -22,10 +22,20 @@ var logger = loggerFactory.CreateLogger<Program>();
 logger.LogInformation("Starting Bot");
 
 var botToken = Environment.GetEnvironmentVariable("BOT_TOKEN");
+var whitelistedUsers = Environment.GetEnvironmentVariable("WHITELISTED_USERS")?
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Select(long.Parse)
+    .ToHashSet();
 
 if (botToken == null)
 {
     logger.LogCritical("Please set BOT_TOKEN environment variable");
+    return;
+}
+
+if (whitelistedUsers == null || whitelistedUsers.Count == 0)
+{
+    logger.LogCritical("Please set WHITELISTED_USERS environment variable");
     return;
 }
 
@@ -45,7 +55,12 @@ return;
 
 async Task HandleMessage(Message message, UpdateType args)
 {
-    if (message.Type != MessageType.Document || message.Document.MimeType != "application/pdf")
+    if (!whitelistedUsers.Contains(message.From?.Id ?? 0))
+    {
+        return;
+    }
+
+    if (message.Type != MessageType.Document || message.Document?.MimeType != "application/pdf")
     {
         await bot.SendMessage(message.Chat, "Please send a PDF document.");
         return;
