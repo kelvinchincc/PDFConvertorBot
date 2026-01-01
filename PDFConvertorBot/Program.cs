@@ -130,10 +130,14 @@ async Task HandleMessage(Message message, UpdateType args)
 
     var fileId = message.Document.FileId;
     var taskId = Guid.NewGuid();
+    var progressMsg = await bot.SendMessage(message.Chat, "Processing document...");
     try
     {
+        await bot.EditMessageText(progressMsg.Chat, progressMsg.Id, "Downloading PDF file... (1/3)");
         await FetchTgFile(fileId, taskId);
+        await bot.EditMessageText(progressMsg.Chat, progressMsg.Id, "Converting PDF to images... (2/3)");
         PdfToImages(taskId);
+        await bot.EditMessageText(progressMsg.Chat, progressMsg.Id, "Preparing images... (3/3)");
         await SendImageCollections(taskId, message.Chat);
     }
     catch (Exception ex)
@@ -143,6 +147,7 @@ async Task HandleMessage(Message message, UpdateType args)
     }
     finally
     {
+        await bot.DeleteMessage(progressMsg.Chat, progressMsg.Id);
         Cleanup(taskId);
     }
 }
