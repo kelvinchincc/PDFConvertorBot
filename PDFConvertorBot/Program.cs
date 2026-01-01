@@ -27,7 +27,7 @@ using var loggerFactory = LoggerFactory.Create(builder =>
         {
             options.IncludeScopes = true;
             options.SingleLine = true;
-            options.TimestampFormat = "YYYY-MM-DD hh:mm:ss ";
+            options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
         });
 });
 var logger = loggerFactory.CreateLogger<Program>();
