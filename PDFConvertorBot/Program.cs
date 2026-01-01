@@ -1,4 +1,9 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿//======================================================================================================================
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//======================================================================================================================
+// See https://aka.ms/new-console-template for more information
 
 using DotNetEnv;
 using Microsoft.Extensions.Logging;
@@ -57,6 +62,13 @@ async Task HandleMessage(Message message, UpdateType args)
 {
     if (!whitelistedUsers.Contains(message.From?.Id ?? 0))
     {
+        return;
+    }
+
+    if ((message.Text ?? "").StartsWith("/start", StringComparison.OrdinalIgnoreCase))
+    {
+        await bot.SendMessage(message.Chat,
+            "Welcome to the PDF Converter Bot! Please send me a PDF document to process.");
         return;
     }
 
