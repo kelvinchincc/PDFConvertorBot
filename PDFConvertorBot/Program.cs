@@ -96,11 +96,33 @@ logger.LogInformation("Bot is " + me.Username);
 bot.OnMessage += HandleMessage;
 
 // Wait until cancellation
-logger.LogInformation("Press any key to exit");
-Console.ReadKey();
-cancellationTokenSource.Cancel();
+logger.LogInformation("Press CTRL+C to exit");
+await WaitForShutDownAsync(cancellationTokenSource, logger);
 
 return;
+
+static Task WaitForShutDownAsync(CancellationTokenSource cts, ILogger logger)
+{
+    void Shutdown()
+    {
+        if (!cts.IsCancellationRequested)
+        {
+            logger.LogInformation("Shutting down");
+            cts.Cancel();
+        }
+    }
+
+    Console.CancelKeyPress += (_, e) =>
+    {
+        // Ctrl + C
+        e.Cancel = true;
+        Shutdown();
+    };
+
+    AppDomain.CurrentDomain.ProcessExit += (_, _) => Shutdown();
+
+    return Task.Delay(Timeout.Infinite, cts.Token).ContinueWith(_ => { }, TaskScheduler.Default);
+}
 
 async Task HandleMessage(Message message, UpdateType args)
 {
