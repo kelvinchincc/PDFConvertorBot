@@ -7,7 +7,7 @@ A Telegram bot that converts PDF documents to images.
 - Converts each page of a PDF document into a separate JPG image.
 - Sends the converted images back to the user as a media group.
 - Whitelist-based access control to restrict usage to authorized users.
-- Supports Docker for easy deployment.
+- In the future might add Docker support for easy deployment.
 
 ## How to Use
 
