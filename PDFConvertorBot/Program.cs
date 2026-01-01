@@ -117,7 +117,12 @@ async Task HandleMessage(Message message, UpdateType args)
         return;
     }
 
-    if (message.Type != MessageType.Document || message.Document is not { MimeType: "application/pdf" })
+    if (message.Type != MessageType.Document)
+    {
+        return;
+    }
+
+    if (message.Document is not { MimeType: "application/pdf" })
     {
         await bot.SendMessage(message.Chat, "Please send a PDF document.");
         return;
@@ -155,7 +160,7 @@ void PdfToImages(Guid taskId)
 {
     logger.LogDebug("Converting PDF {taskId} to images", taskId);
     MagickNET.SetTempDirectory(tempDirPath);
-    var settings = new MagickReadSettings { Density = new Density(300, 300) };
+    var settings = new MagickReadSettings { Density = new Density(200, 200) };
     using var images = new MagickImageCollection();
     var imagesPath = Path.Combine(tempDirPath, $"{taskId}.pdf");
 
@@ -173,8 +178,8 @@ void PdfToImages(Guid taskId)
     var page = 1;
     foreach (var image in images)
     {
-        image.Format = MagickFormat.WebP;
-        image.Write(Path.Combine(outputDir, $"page_{page}.webp"));
+        image.Format = MagickFormat.Jpg;
+        image.Write(Path.Combine(outputDir, $"page_{page}.jpg"));
         page++;
     }
 }
@@ -183,7 +188,7 @@ async Task SendImageCollections(Guid taskId, Chat chat)
 {
     logger.LogDebug("Sending image collection for file {taskId}", taskId);
     var outputDir = Path.Combine(tempDirPath, taskId.ToString());
-    var files = Directory.GetFiles(outputDir, "*.webp");
+    var files = Directory.GetFiles(outputDir, "*.jpg");
     if (files.Length == 0)
     {
         return;
