@@ -5,6 +5,9 @@
 //======================================================================================================================
 // See https://aka.ms/new-console-template for more information
 
+#pragma warning disable CA1848, CA1873
+
+using System.Globalization;
 using DotNetEnv;
 using ImageMagick;
 using Microsoft.Extensions.Logging;
@@ -32,12 +35,12 @@ using var loggerFactory = LoggerFactory.Create(builder =>
 });
 var logger = loggerFactory.CreateLogger<Program>();
 logger.LogInformation("Starting Bot");
-logger.LogInformation("Args: {args}", string.Join(", ", args));
-logger.LogInformation("Verbose logging: {verbose}", useVerboseLogging);
+logger.LogInformation("Args: {Args}", string.Join(", ", args));
+logger.LogInformation("Verbose logging: {Verbose}", useVerboseLogging);
 
 var tempDirPath = Path.Combine(Environment.CurrentDirectory, "temp");
 
-logger.LogInformation("Temporary directory: {tempDir}", tempDirPath);
+logger.LogInformation("Temporary directory: {TempDir}", tempDirPath);
 
 if (!Path.Exists(tempDirPath))
 {
@@ -65,16 +68,17 @@ else
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to delete temporary file or directory: {file}", file);
+            logger.LogWarning(ex, "Failed to delete temporary file or directory: {File}", file);
         }
     }
 }
 
 var botToken = Environment.GetEnvironmentVariable("BOT_TOKEN");
-var whitelistedUsers = Environment.GetEnvironmentVariable("WHITELISTED_USERS")?
-    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-    .Select(long.Parse)
-    .ToHashSet();
+var whitelistedUsers = (
+    from userId in Environment.GetEnvironmentVariable("WHITELISTED_USERS")?
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    select long.Parse(userId, CultureInfo.InvariantCulture)
+).ToHashSet();
 
 if (botToken == null)
 {
@@ -82,7 +86,7 @@ if (botToken == null)
     return;
 }
 
-if (whitelistedUsers == null || whitelistedUsers.Count == 0)
+if (whitelistedUsers.Count == 0)
 {
     logger.LogCritical("Please set WHITELISTED_USERS environment variable");
     return;
@@ -91,7 +95,7 @@ if (whitelistedUsers == null || whitelistedUsers.Count == 0)
 using var cancellationTokenSource = new CancellationTokenSource();
 var bot = new TelegramBotClient(botToken, cancellationToken: cancellationTokenSource.Token);
 var me = await bot.GetMe();
-logger.LogInformation("Bot is " + me.Username);
+logger.LogInformation("Bot is logged in as {Username}", me.Username);
 
 bot.OnMessage += HandleMessage;
 
@@ -101,17 +105,9 @@ await WaitForShutDownAsync(cancellationTokenSource, logger);
 
 return;
 
+// Local function definitions
 static Task WaitForShutDownAsync(CancellationTokenSource cts, ILogger logger)
 {
-    void Shutdown()
-    {
-        if (!cts.IsCancellationRequested)
-        {
-            logger.LogInformation("Shutting down");
-            cts.Cancel();
-        }
-    }
-
     Console.CancelKeyPress += (_, e) =>
     {
         // Ctrl + C
@@ -122,6 +118,18 @@ static Task WaitForShutDownAsync(CancellationTokenSource cts, ILogger logger)
     AppDomain.CurrentDomain.ProcessExit += (_, _) => Shutdown();
 
     return Task.Delay(Timeout.Infinite, cts.Token).ContinueWith(_ => { }, TaskScheduler.Default);
+
+    // Local function definitions
+    void Shutdown()
+    {
+        if (cts.IsCancellationRequested)
+        {
+            return;
+        }
+
+        logger.LogInformation("Shutting down");
+        cts.Cancel();
+    }
 }
 
 async Task HandleMessage(Message message, UpdateType args)
@@ -185,7 +193,7 @@ async Task FetchTgFile(string fileId, Guid taskId)
 
 void PdfToImages(Guid taskId)
 {
-    logger.LogDebug("Converting PDF {taskId} to images", taskId);
+    logger.LogDebug("Converting PDF {TaskId} to images", taskId);
     MagickNET.SetTempDirectory(tempDirPath);
     var settings = new MagickReadSettings { Density = new Density(200, 200) };
     using var images = new MagickImageCollection();
@@ -213,7 +221,7 @@ void PdfToImages(Guid taskId)
 
 async Task SendImageCollections(Guid taskId, Chat chat)
 {
-    logger.LogDebug("Sending image collection for file {taskId}", taskId);
+    logger.LogDebug("Sending image collection for file {TaskId}", taskId);
     var outputDir = Path.Combine(tempDirPath, taskId.ToString());
     var files = Directory.GetFiles(outputDir, "*.jpg");
     if (files.Length == 0)
@@ -221,8 +229,10 @@ async Task SendImageCollections(Guid taskId, Chat chat)
         return;
     }
 
-    var mediaGroup = new List<FileStream>(files.Length);
-    mediaGroup.AddRange(files.Select(file => new FileStream(file, FileMode.Open, FileAccess.Read)));
+    var mediaGroup = (
+        from file in files
+        select new FileStream(file, FileMode.Open, FileAccess.Read)
+    ).ToList();
 
     try
     {
@@ -231,20 +241,21 @@ async Task SendImageCollections(Guid taskId, Chat chat)
     }
     catch (Exception ex)
     {
-        logger.LogError("Error sending media group for file {taskId}: {Error}", taskId, ex.Message);
+        logger.LogError("Error sending media group for file {TaskId}: {Error}", taskId, ex.Message);
     }
     finally
     {
-        foreach (var file in mediaGroup)
-        {
-            file.Close();
-        }
+        var tasks = (
+            from stream in mediaGroup
+            select stream.DisposeAsync().AsTask()
+        ).ToArray();
+        await Task.WhenAll(tasks);
     }
 }
 
 void Cleanup(Guid taskId)
 {
-    logger.LogDebug("Cleaning up temporary files for file {taskId}", taskId);
+    logger.LogDebug("Cleaning up temporary files for file {TaskId}", taskId);
     var tempDir = Path.Combine(Environment.CurrentDirectory, "temp");
     var pdfPath = Path.Combine(tempDir, $"{taskId}.pdf");
     if (File.Exists(pdfPath))
@@ -258,3 +269,5 @@ void Cleanup(Guid taskId)
         Directory.Delete(outputDir, true);
     }
 }
+
+#pragma warning restore CA1848, CA1873
