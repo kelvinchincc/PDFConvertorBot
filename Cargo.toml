@@ -7,6 +7,7 @@ edition = "2024"
 anyhow = "1.0.102"
 dotenv = "0.15.0"
 log = "0.4.29"
+mime = "0.3.17"
 pretty_env_logger = "0.5.0"
 teloxide = { version = "0.17.0", features = ["webhooks", "webhooks-axum"] }
 tokio = "1.52.3"
