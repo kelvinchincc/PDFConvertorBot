@@ -1,6 +1,8 @@
 mod constants;
-use std::env;
+mod services;
 
+use constants::messages;
+use std::env;
 use teloxide::{prelude::*, update_listeners::webhooks};
 
 #[tokio::main]
@@ -52,8 +54,8 @@ async fn handle_message(allowed_users: &Vec<String>, bot: Bot, msg: Message) -> 
     match msg.document() {
         None => {
             log::info!("Received message: {:?}", msg);
-            bot.send_message(msg.chat.id, "Hello! This is a PDF Convertor Bot. Please send me a PDF file to convert it to another format.")
-            .await?;
+            bot.send_message(msg.chat.id, messages::SELF_INTRO_MSG)
+                .await?;
             return Ok(());
         }
         _ => {}
@@ -66,7 +68,7 @@ async fn handle_message(allowed_users: &Vec<String>, bot: Bot, msg: Message) -> 
     };
     let Some(mime_type) = &document.mime_type else {
         log::info!("Received document without MIME type: {:?}", document);
-        bot.send_message(msg.chat.id, "Sorry, I couldn't determine the file type of the document you sent. Please make sure to send a valid PDF file.")
+        bot.send_message(msg.chat.id, messages::FAILED_WITH_NO_MIME)
             .await?;
         return Ok(());
     };
@@ -77,19 +79,19 @@ async fn handle_message(allowed_users: &Vec<String>, bot: Bot, msg: Message) -> 
             document,
             mime_type
         );
-        bot.send_message(
-            msg.chat.id,
-            "Sorry, I can only process PDF files. Please send a valid PDF file.",
-        )
-        .await?;
+        bot.send_message(msg.chat.id, messages::FAILED_WITH_INVALID_MIME)
+            .await?;
         return Ok(());
     }
 
     bot.send_message(
         msg.chat.id,
-        format!("Received PDF file: {}. Starting conversion...", filename),
+        messages::get_stage_1_message(filename.as_str()),
     )
     .await?;
+
+    services::pdf_extration::prepare_working_dir(&document.file.id.to_string()).await?;
+    services::pdf_extration::download_pdf(&bot, document).await?;
 
     Ok(())
 }

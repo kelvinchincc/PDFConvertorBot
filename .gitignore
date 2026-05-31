@@ -10,3 +10,5 @@ riderModule.iml
 # Added by cargo
 
 /target
+
+.downloads
