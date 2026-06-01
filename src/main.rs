@@ -13,8 +13,8 @@ async fn main() -> anyhow::Result<()> {
     let allowed_users = std::sync::Arc::new(constants::env::whitelisted_users());
     log::info!("Allowed users: {:?}", allowed_users);
 
-    log::info!("Clearing old downloads...");
-    services::pdf_extration::reset_work_folder()?;
+    // log::info!("Clearing old downloads...");
+    // services::pdf_extration::reset_work_folder()?;
 
     let bot = Bot::from_env();
     let addr = ([0, 0, 0, 0], 3000).into();
