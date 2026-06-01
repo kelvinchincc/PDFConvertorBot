@@ -1,5 +1,12 @@
 {
   "inlay_hints": {
-    "enabled": true
-  }
+    "enabled": true,
+  },
+  "lsp": {
+    "ruby-lsp": {
+      "settings": {
+        "use_bundler": false,
+      },
+    },
+  },
 }

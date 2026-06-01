@@ -1,0 +1,30 @@
+name: Build and Push Docker Image (Simple)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: codeberg-tiny
+    permissions:
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Codeberg
+        run: |
+          echo "${{ secrets.REPO_TOKEN }}" | docker login codeberg.org -u "${{ gitea.actor }}" --password-stdin
+
+      - name: Build and push
+        run: |
+          docker build -t codeberg.org/${{ gitea.repository_owner }}/pdfconvertorbot:${{ gitea.ref_name }} .
+          docker push codeberg.org/${{ gitea.repository_owner }}/pdfconvertorbot:${{ gitea.ref_name }}
+
+      - name: Push latest tag
+        if: startsWith(gitea.ref, 'refs/tags/v')
+        run: |
+          docker tag codeberg.org/${{ gitea.repository_owner }}/pdfconvertorbot:${{ gitea.ref_name }} codeberg.org/${{ gitea.repository_owner }}/pdfconvertorbot:latest
+          docker push codeberg.org/${{ gitea.repository_owner }}/pdfconvertorbot:latest
