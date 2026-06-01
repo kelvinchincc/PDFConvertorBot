@@ -17,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
     services::pdf_extration::reset_work_folder()?;
 
     let bot = Bot::from_env();
-    let addr = ([127, 0, 0, 1], 3000).into();
+    let addr = ([0, 0, 0, 0], 3000).into();
     let url = constants::env::teleoxide_webhook_url();
     let listener = webhooks::axum(
         bot.clone(),
