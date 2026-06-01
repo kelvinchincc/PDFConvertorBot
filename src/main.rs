@@ -55,10 +55,6 @@ async fn handle_message(allowed_users: &Vec<String>, bot: Bot, msg: Message) -> 
             .await?;
         return Ok(());
     };
-    let filename = match &document.file_name {
-        Some(filename) => filename.clone(),
-        None => "".to_string(),
-    };
     let Some(mime_type) = &document.mime_type else {
         log::info!("Received document without MIME type: {:?}", document);
         bot.send_message(msg.chat.id, messages::FAILED_WITH_NO_MIME)
@@ -78,10 +74,7 @@ async fn handle_message(allowed_users: &Vec<String>, bot: Bot, msg: Message) -> 
     }
 
     let msg_handle = bot
-        .send_message(
-            msg.chat.id,
-            messages::get_stage_1_message(filename.as_str()),
-        )
+        .send_message(msg.chat.id, messages::RECEIVED_PDF)
         .await?;
 
     match process_pdf(&bot, &msg, &msg_handle, document).await {
