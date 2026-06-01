@@ -2,9 +2,7 @@ mod constants;
 mod services;
 
 use constants::messages;
-use teloxide::{
-    dispatching::dialogue::GetChatId, prelude::*, types::Document, update_listeners::webhooks,
-};
+use teloxide::{prelude::*, types::Document, update_listeners::webhooks};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -14,6 +12,9 @@ async fn main() -> anyhow::Result<()> {
 
     let allowed_users = std::sync::Arc::new(constants::env::whitelisted_users());
     log::info!("Allowed users: {:?}", allowed_users);
+
+    log::info!("Clearing old downloads...");
+    services::pdf_extration::reset_work_folder()?;
 
     let bot = Bot::from_env();
     let addr = ([127, 0, 0, 1], 3000).into();
@@ -83,7 +84,7 @@ async fn handle_message(allowed_users: &Vec<String>, bot: Bot, msg: Message) -> 
         )
         .await?;
 
-    match process_pdf(&bot, document).await {
+    match process_pdf(&bot, &msg, &msg_handle, document).await {
         Ok(()) => log::info!("PDF of {} being processed!", document.file.id),
         Err(err) => {
             log::error!(
@@ -99,12 +100,39 @@ async fn handle_message(allowed_users: &Vec<String>, bot: Bot, msg: Message) -> 
     Ok(())
 }
 
-async fn process_pdf(bot: &Bot, document: &Document) -> anyhow::Result<()> {
+async fn process_pdf(
+    bot: &Bot,
+    msg: &Message,
+    msg_handle: &Message,
+    document: &Document,
+) -> anyhow::Result<()> {
     use services::pdf_extration;
 
+    let chat_id = msg.chat.id;
+    let document_id = document.file.id.clone();
+    let system_msg_id = msg_handle.id;
+
     pdf_extration::prepare_working_dir(&document.file.id.to_string()).await?;
+
+    log::info!("Downloading file {} from Telegram...", document_id);
+    bot.edit_message_text(chat_id, system_msg_id, messages::DOWNLOADING_PDF)
+        .await?;
     pdf_extration::download_pdf(&bot, &document).await?;
-    pdf_extration::extract_pdf_pages(document)?;
+
+    log::info!("Extracting pages from PDF {}...", document_id);
+    bot.edit_message_text(chat_id, system_msg_id, messages::EXTRACTING_PDF)
+        .await?;
+    let page_size = pdf_extration::extract_pdf_pages(document)?;
+
+    log::info!("Uploading pages of PDF {} to Telegram...", document_id);
+    bot.edit_message_text(chat_id, system_msg_id, messages::UPLOADING_PAGES)
+        .await?;
+    pdf_extration::upload_pages_to_telegram(&bot, &msg.id, &chat_id, &document_id, page_size)
+        .await?;
+
+    log::info!("Cleaning up working dir of {}...", document_id);
+    bot.delete_message(chat_id, msg_handle.id).await?;
+    pdf_extration::clean_up_work_folder(&document_id)?;
 
     Ok(())
 }
