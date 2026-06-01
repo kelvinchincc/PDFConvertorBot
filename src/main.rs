@@ -2,7 +2,9 @@ mod constants;
 mod services;
 
 use constants::messages;
-use teloxide::{prelude::*, update_listeners::webhooks};
+use teloxide::{
+    dispatching::dialogue::GetChatId, prelude::*, types::Document, update_listeners::webhooks,
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -74,14 +76,35 @@ async fn handle_message(allowed_users: &Vec<String>, bot: Bot, msg: Message) -> 
         return Ok(());
     }
 
-    bot.send_message(
-        msg.chat.id,
-        messages::get_stage_1_message(filename.as_str()),
-    )
-    .await?;
+    let msg_handle = bot
+        .send_message(
+            msg.chat.id,
+            messages::get_stage_1_message(filename.as_str()),
+        )
+        .await?;
 
-    services::pdf_extration::prepare_working_dir(&document.file.id.to_string()).await?;
-    services::pdf_extration::download_pdf(&bot, document).await?;
+    match process_pdf(&bot, document).await {
+        Ok(()) => log::info!("PDF of {} being processed!", document.file.id),
+        Err(err) => {
+            log::error!(
+                "Failed to process PDF of {}, where {}",
+                document.file.id,
+                err.to_string()
+            );
+            bot.edit_message_text(msg.chat.id, msg_handle.id, messages::FAILED_TO_PROCESS_PDF)
+                .await?;
+        }
+    }
+
+    Ok(())
+}
+
+async fn process_pdf(bot: &Bot, document: &Document) -> anyhow::Result<()> {
+    use services::pdf_extration;
+
+    pdf_extration::prepare_working_dir(&document.file.id.to_string()).await?;
+    pdf_extration::download_pdf(&bot, &document).await?;
+    pdf_extration::extract_pdf_pages(document)?;
 
     Ok(())
 }
