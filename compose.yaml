@@ -1,7 +1,0 @@
-﻿services:
-  pdfconvertorbot:
-    image: pdfconvertorbot
-    build:
-      context: .
-      dockerfile: PDFConvertorBot/Dockerfile
-

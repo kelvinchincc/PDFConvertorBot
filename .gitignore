@@ -6,3 +6,9 @@ riderModule.iml
 
 .env
 .idea
+
+# Added by cargo
+
+/target
+
+.downloads
