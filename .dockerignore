@@ -7,10 +7,13 @@
 **/.toolstarget
 **/.vs
 **/.vscode
+**/.zed
+**/.ruby-lsp
 **/.idea
 **/*.*proj.user
 **/*.dbmdl
 **/*.jfm
+**/target
 **/azds.yaml
 **/bin
 **/charts

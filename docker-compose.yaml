@@ -1,0 +1,7 @@
+services:
+  pdf-convertor-bot:
+    image: pdf-convertor-bot:latest
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
