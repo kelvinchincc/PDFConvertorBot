@@ -2,7 +2,6 @@ mod constants;
 mod services;
 
 use constants::messages;
-use std::env;
 use teloxide::{prelude::*, update_listeners::webhooks};
 
 #[tokio::main]
@@ -16,14 +15,10 @@ async fn main() -> anyhow::Result<()> {
 
     let bot = Bot::from_env();
     let addr = ([127, 0, 0, 1], 3000).into();
-    let url = (env::var("TELOXIDE_WEBHOOK_URL").expect("TELOXIDE_WEB_HOOK_URL must be set"))
-        .parse()
-        .expect("Failed to parse TELOXIDE_WEB_HOOK_URL");
+    let url = constants::env::teleoxide_webhook_url();
     let listener = webhooks::axum(
         bot.clone(),
-        webhooks::Options::new(addr, url).secret_token(
-            env::var("TELOXIDE_SECRET_TOKEN").expect("TELOXIDE_SECRET_TOKEN must set"),
-        ),
+        webhooks::Options::new(addr, url).secret_token(constants::env::teleoxide_secret_token()),
     )
     .await
     .expect("Falied to start telegram bot");
@@ -51,17 +46,12 @@ async fn handle_message(allowed_users: &Vec<String>, bot: Bot, msg: Message) -> 
         return Ok(());
     }
 
-    match msg.document() {
-        None => {
-            log::info!("Received message: {:?}", msg);
-            bot.send_message(msg.chat.id, messages::SELF_INTRO_MSG)
-                .await?;
-            return Ok(());
-        }
-        _ => {}
-    }
-
-    let document = msg.document().unwrap();
+    let Some(document) = msg.document() else {
+        log::info!("Received message without document: {:?}", msg);
+        bot.send_message(msg.chat.id, messages::SELF_INTRO_MSG)
+            .await?;
+        return Ok(());
+    };
     let filename = match &document.file_name {
         Some(filename) => filename.clone(),
         None => "".to_string(),
