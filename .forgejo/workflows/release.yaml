@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: codeberg-tiny
+    runs-on: linux-x86
     permissions:
       packages: write
 
