@@ -26,6 +26,8 @@ async fn main() -> anyhow::Result<()> {
     .await
     .expect("Falied to start telegram bot");
 
+    log::info!("Bot started, now listening for messages...");
+
     teloxide::repl_with_listener(
         bot,
         move |bot: Bot, msg: Message| {
