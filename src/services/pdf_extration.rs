@@ -92,13 +92,18 @@ pub fn clean_up_work_folder(document_id: &FileId) -> anyhow::Result<()> {
 }
 
 pub fn reset_work_folder() -> anyhow::Result<()> {
-    // If .downloads folder exists and contents childs, remove it and create a new one
-    let dir_path = "./.downloads";
+    // Remove the contents in the working folder, do not remove the folder itself
 
-    if std::fs::metadata(&dir_path).is_ok() {
-        std::fs::remove_dir_all(&dir_path)?;
+    let dir_path = "./.downloads";
+    let children = std::fs::read_dir(dir_path)?;
+    for child in children {
+        let child_path = child?.path();
+        if child_path.is_dir() {
+            std::fs::remove_dir_all(child_path)?;
+        } else {
+            std::fs::remove_file(child_path)?;
+        }
     }
-    std::fs::create_dir_all(&dir_path)?;
 
     Ok(())
 }
