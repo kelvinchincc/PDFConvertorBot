@@ -19,68 +19,54 @@ A Telegram bot that converts PDF documents to images.
 
 The bot is configured using environment variables. The following variables are required:
 
-- `BOT_TOKEN`: The token for your Telegram bot.
+- `TELOXIDE_TOKEN`: The token for your Telegram bot.
 - `WHITELISTED_USERS`: A comma-separated list of user IDs that are authorized to use the bot.
+- `TELOXIDE_SECRET_TOKEN`: Secret token where Telegram will used to authorize with the bot.
+- `TELOXIDE_WEBHOOK_URL`: Webhook URL where Telegram will call on receving messages.
 
 You can create a `.env` file in the root of the project to store these variables. The bot uses the `DotNetEnv` library
-to load the environment variables from this file.
-
-### Example `.env` file
-
-```
-BOT_TOKEN=1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ
-WHITELISTED_USERS=123456789,987654321
-```
+to load the environment variables from this file. For other variables, refer to `sample.env` file. Docker evironment
+variables are recommended over `.env` file if using docker.
 
 ## Deployment
 
-The project includes a `Dockerfile` and a `compose.yaml` file for easy deployment using Docker.
-
-> Note: Docker build are currently in experimental stage and may not work as expected.
+The project includes a `Dockerfile` and a `docker-compose.yaml` file for easy deployment using Docker. Precompiled
+images can be found at the [packages](https://github.com/users/kelvinchincc/packages/container/package/pdf-convertor-bot)
+section, refer to the follwoing section for an example on using the precompiled package.
 
 ### Docker
 
-To build and run the bot using Docker, you can use the following commands:
+It is recommended to use Docker to deploy the bot, a sample `docker-compose.yaml` file is as below:
 
-```bash
-docker build -t pdf-convertor-bot .
-docker run -d --env-file .env pdf-convertor-bot
-```
-
-### Docker Compose
-
-To build and run the bot using Docker Compose, you can use the following command:
-
-```bash
-docker-compose up -d
+```yaml
+services:
+  pdf-convertor-bot:
+    image: ghcr.io/kelvinchincc/pdf-convertor-bot:latest
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - /docker/volumes/pdf-convertor-bot/downloads:/app/.downloads
 ```
 
 ### Without Docker
 
-To run the bot without Docker, ensure you have .NET installed and use the following commands:
+To run the bot without Docker, ensure you have Rust installed and cargo is up, recommened Rust 1.29.0+
 
 ```bash
-dotnet build
-dotnet run
+cargo run
 ```
 
-Or download the prebuild from the [release](https://codeberg.org/kelvinchincc/PDFConvertorBot/releases) page
+### Webhook URL Tips
 
-To run with the prebuild, use the following command:
+This bot use [Teloxide](https://github.com/teloxide/teloxide) to handle web hook, please refer to the
+[ngrok example](https://github.com/teloxide/teloxide/blob/master/crates/teloxide/examples/ngrok_ping_pong.rs) on how
+webhook is used, the script `start-dev-tunnel.rb` would help to start a dev tunnel with
+[tailscale funnel](https://tailscale.com/docs/features/tailscale-funnel)
 
-```bash
-7z x pdf-convertor-bot-linux-amd64-version-here.7z
-sudo chmod u+x ./bin/PDFConvertorBot
-./bin/PDFConvertorBot
-```
+I still exploring how the webhook path work on the Teloxide crate work so the provided script might change in future.
 
-Make sure to replace `version-here` with the actual version number of the release you downloaded. And ensure that the
-`.env` file is in the same directory as the executable or provide the environment variables through other means.
+## License
 
-To run it headless, systemd service or running with PM2 is recommended. Use fork mode if you are using PM2. Eg:
-
-```bash
-cd bin
-pm2 start ./PDFConvertorBot --name "pdf-convertor-bot"
-pm2 save
-```
+This project use the MPL-2.0 license, refer to license.md for more deatils.

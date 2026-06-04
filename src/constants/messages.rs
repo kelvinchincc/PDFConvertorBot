@@ -1,3 +1,6 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 pub const SELF_INTRO_MSG: &str = "Hello! This is a PDF Convertor Bot. Please send me a PDF file to convert it to another format.";
 pub const FAILED_WITH_NO_MIME: &str = "Sorry, I couldn't determine the file type of the document you sent. Please make sure to send a valid PDF file.";
 pub const FAILED_WITH_INVALID_MIME: &str =
